@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">RN_Map</string>
+    <string name="GOOGLE_API_KEY">${GOOGLE_API_KEY}</string>
+
 </resources>

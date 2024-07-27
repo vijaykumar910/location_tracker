@@ -72,3 +72,13 @@ yarn-error.log
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+# Environments
+.env.local
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
