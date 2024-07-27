@@ -5,6 +5,8 @@
  * @format
  */
 
+navigator.geolocation = require('@react-native-community/geolocation');
+
 import React from 'react';
 import MapComponent from './src/map';
 
@@ -17,10 +19,6 @@ function App(): React.JSX.Element {
 }
 
 export default App;
-
-
-
-
 
 
 

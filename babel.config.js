@@ -1,4 +1,4 @@
-api.cache(false)
+// api.cache(false)
 module.exports = {
   plugins: [
     [
@@ -10,6 +10,6 @@ module.exports = {
       },
 
     ]
-  ]
+  ],
   presets: ['module:@react-native/babel-preset'],
 };
