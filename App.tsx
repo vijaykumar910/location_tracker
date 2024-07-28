@@ -5,20 +5,29 @@
  * @format
  */
 
-navigator.geolocation = require('@react-native-community/geolocation');
-
 import React from 'react';
-import MapComponent from './src/map';
+import Stack_Navigator from './routes/HomeStack';
+import { NavigationContainer } from '@react-navigation/native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import 'react-native-gesture-handler';
 
 
-function App(): React.JSX.Element {
 
+function App(): React.JSX.Element{
   return (
-      <MapComponent /> 
+    <SafeAreaProvider>
+      <NavigationContainer>
+        <Stack_Navigator />
+      </NavigationContainer>
+     </SafeAreaProvider>
   );
 }
 
 export default App;
+
+
+
+
 
 
 
