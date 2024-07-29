@@ -38,7 +38,7 @@ const Maps = () => {
 
     const intervalId = setInterval(() => {
       getLocation();
-    }, 10000);
+    }, 600000);
 
     return () => clearInterval(intervalId);
   }, []);
