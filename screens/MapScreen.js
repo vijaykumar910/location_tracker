@@ -1,183 +1,170 @@
-import { useEffect, useState, useRef } from 'react';
+import {Image, StyleSheet, Text, View} from 'react-native';
+import React, {useEffect, useState} from 'react';
+import MapView, {PROVIDER_GOOGLE, Marker, Polyline} from 'react-native-maps';
 import Geolocation from '@react-native-community/geolocation';
-import MapViewDirections from 'react-native-maps-directions';
-import {GOOGLE_API_KEY} from '@env'
-import {
-    SafeAreaView,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    useColorScheme,
-    View,
-  } from 'react-native';
-import MapView, { PROVIDER_GOOGLE, Marker } from 'react-native-maps'; // remove PROVIDER_GOOGLE import if not using Google Maps
+import moment from 'moment';
+import SpinnerOverlay from "react-native-loading-spinner-overlay";
 
-const MapScreen = () => {
-    const [locationCoordinate, setLocationCoordinate] = useState([])
-    const [currectLocation, setCurrectLocation] = useState(null)
-    // const [initialLocation, setInitialLocation] = useState({latitude: 28.35621289845291, 
-    //   longitude: 77.27596389671442,})
-      const [initialLocation, setInitialLocation] = useState(null)
-    const mapRef = useRef()
-    const markerRef = useRef()
-    
+const Maps = () => {
+  const [currentLocation, setCurrentLocation] = useState();
+  const [coords, setCoords] = useState([]);
+  const [locationHistory, setLocationHistory] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-    useEffect(()=>{
-      Geolocation.getCurrentPosition(
-        (position) => {
-            setInitialLocation({ 
-              latitude: position.coords.latitude,
-                longitude: position.coords.longitude})
+  useEffect(() => {
+    const getLocation = async () => {
+      try {
+        const position = await new Promise((resolve, reject) => {
+          Geolocation.getCurrentPosition(resolve, reject);
+        });
 
-            setLocationCoordinate([...locationCoordinate, { 
-              latitude: position.coords.latitude,
-                longitude: position.coords.longitude}])
-        },
-        (error) => {
-          console.log("getCurrentPosition",error.code, "hh", error.message);
-        },
-        { enableHighAccuracy: true, timeout: 30000, maximumAge: 30000 }
-      );
+        const {coords} = position;
 
-      // getCurrentLocation()
+        setLocationHistory(prevHistory => [
+          ...prevHistory,
+          {
+            latitude: coords.latitude,
+            longitude: coords.longitude,
+            timestamp: moment().format('MM/DD/YYYY HH:mm:ss'),
+          },
+        ]);
+        setIsLoading(false)
+      } catch (error) {
+        console.error('Error getting location:', error);
+      }
+    };
 
-      // const watchId = Geolocation.watchPosition(
-      //   (position) => {
-      //     // console.log("watchPosition position",position);
-      //     updateState(position)
-      //   },
-      //   (error) => {
-      //     console.log("watchPosition error",error);
-      //   },
-      //   {enableHighAccuracy: true, distanceFilter: 10, }
-      // );
+    getLocation();
 
+    const intervalId = setInterval(() => {
+      getLocation();
+    }, 10000);
 
-      return(()=>{
-        // Geolocation.clearWatch(watchId);
-      })
-    },[])
+    return () => clearInterval(intervalId);
+  }, []);
 
-    updateState = (position) =>{
-      console.log("update post", position)
-      setLocationCoordinate([...locationCoordinate, { 
-        latitude: position.coords.latitude,
-          longitude: position.coords.longitude}])
+  useEffect(() => {
+    if (locationHistory.length > 0) {
+      setCurrentLocation(locationHistory[0]);
+      const coordinatesWithoutTimestamp = locationHistory.map(coordinate => ({
+        latitude: coordinate.latitude,
+        longitude: coordinate.longitude,
+      }));
+      setCoords(coordinatesWithoutTimestamp);
+    }
+  }, [locationHistory]);
+
+  const getRotation = (coords, index) => {
+    if (index < coords.length - 1) {
+      const {latitude: lat1, longitude: lon1} = coords[index];
+      const {latitude: lat2, longitude: lon2} = coords[index + 1];
+      const angle = Math.atan2(lon2 - lon1, lat2 - lat1) * (180 / Math.PI);
+
+      return angle;
     }
 
-    // const getCurrentLocation = () =>{
-    //   Geolocation.getCurrentPosition(
-    //     (position) => {
-    //       console.log("cuurent position",position);
-    //       if(initialLocation) {
-    //         setLocationCoordinate([...locationCoordinate, { 
-    //           latitude: position.coords.latitude,
-    //             longitude: position.coords.longitude}])
-    //       }
-    //       else{
-    //         setInitialLocation({ 
-    //           latitude: position.coords.latitude,
-    //             longitude: position.coords.longitude})
-    //         }
-    //     },
-    //     (error) => {
-    //       console.log("getCurrentPosition",error.code, error.message);
-    //     },
-    //     { enableHighAccuracy: true, timeout: 30000, maximumAge: 10000 }
-    //   );
-    // }
+    return 0;
+  };
 
-    const fetchTime = (d, t) => {
-      updateState({
-          distance: d,
-          time: t
-      })
-  }
+  return (
+    <View style={styles.container}>
+        <SpinnerOverlay
+        visible={isLoading}
+        overlayColor=""
+        color="gray"
+        size="large"
+        textContent={"loading..."}
+        textStyle={{ color: "black" }}
+      />
+      <MapView
+        provider={PROVIDER_GOOGLE}
+        rotateEnabled={false}
+        style={styles.map}
+        region={{ 
+          latitude: currentLocation?.latitude,
+          longitude: currentLocation?.longitude,
+          latitudeDelta: 0.005,
+          longitudeDelta: 0.005,
+        }}>
+        {coords.length > 1
+          ? coords.map((coordinate, index) => (
+              <React.Fragment key={index}>
+                <Marker
+                  coordinate={coordinate}
+                  anchor={{x: 0.5, y: 0.5}}
+                  rotation={getRotation(coords, index)}>
+                  {index === coords.length - 1 ? (
+                    <Marker coordinate={coordinate}>
+                      <View
+                        style={{
+                          backgroundColor: '#17202A',
+                          borderRadius: 90,
+                          height: 35,
+                          width: 35,
+                          flex: 1,
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                        }}>
+                        <Text>stop</Text>
+                      </View>
+                    </Marker>
+                  ) : index === 0 ? (
+                    <Marker coordinate={coordinate}>
+                      <View
+                        style={{
+                          backgroundColor: '#6495ED',
+                          borderRadius: 90,
+                          height: 35,
+                          width: 35,
+                          flex: 1,
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                        }}>
+                        <Text>start</Text>
+                      </View>
+                    </Marker>
+                  ) : (
+                    <Image
+                      source={require('../assets/images/arrow.png')}
+                      style={{
+                        width: 20,
+                        height: 20,
+                        transform: [{rotate: `-${90}deg`}],
+                      }}
+                    />
+                  )}
+                </Marker>
+                {index < coords.length - 1 && (
+                  <Polyline
+                    coordinates={[coordinate, coords[index + 1]]}
+                    strokeWidth={6}
+                    strokeColor="#6495ED"
+                  />
+                )}
+              </React.Fragment>
+            ))
+          : coords.length === 1 && (
+              <Marker coordinate={coords[0]} title="Current Location" />
+            )}
+      </MapView>
+    </View>
+  );
+};
 
-  const onCenter = () => {
-    mapRef.current.animateToRegion({
-        latitude: locationCoordinate.latitude,
-        longitude: locationCoordinate.longitude,
-        latitudeDelta: LATITUDE_DELTA,
-        longitudeDelta: LONGITUDE_DELTA
-    })
-}
-    
-
-      return (
-        <View style={styles.container}>
-          {initialLocation ? 
-          <MapView
-              ref={mapRef}
-              provider={PROVIDER_GOOGLE} // remove if not using Google Maps
-              style={styles.map}
-              initialRegion={{
-                ...initialLocation,
-                latitudeDelta: 0.005,
-                longitudeDelta: 0.005,
-            }}
-        >
-           {/* {locationCoordinate.map((coordinate, index) =>
-              <Marker key={`coordinate_${index}`} coordinate={coordinate} />
-            )} */}
-
-          {locationCoordinate.length > 1 && (
-            <MapViewDirections
-                        origin={initialLocation}
-                        destination={locationCoordinate.at(-1)}
-                        apikey={GOOGLE_API_KEY}
-                        strokeWidth={5}
-                        strokeColor="blue"
-                        precision='high'
-                        splitWaypoints={true}
-                        optimizeWaypoints={false}
-                        onStart={(params) => {
-                            console.log(`Started routing between "${params.origin}" and "${params.destination}"`);
-                        }}
-                        // onReady={result => {
-                        //   console.log("result", result)
-                        //     console.log(`Distance: ${result.distance} km`)
-                        //     console.log(`Duration: ${result.duration} min.`)
-                        //     fetchTime(result.distance, result.duration),
-                        //         mapRef.current.fitToCoordinates(result.coordinates, {
-                        //             edgePadding: {
-                        //                 // right: 30,
-                        //                 // bottom: 300,
-                        //                 // left: 30,
-                        //                 // top: 100,
-                        //             },
-                        //         });
-                        // }}
-                        onError={(errorMessage) => {
-                            console.log('GOT AN ERROR', errorMessage);
-                        }}
-                    />)}
-        </MapView> : 
-          <Text style={styles.headingTxt}>Loader</Text>
-        }
-      </View>
-      )
-}
 const styles = StyleSheet.create({
   container: {
     ...StyleSheet.absoluteFillObject,
-    // height: 400,
-    // width: 400,
-    flex: 1,
-    justifyContent: 'center',
+    flex:1,
+    justifyContent: 'flex-end',
     alignItems: 'center',
   },
   map: {
     ...StyleSheet.absoluteFillObject,
   },
-  headingTxt:{
-    marginTop: 50,
-    color:"black", 
-    fontWeight: 'bold',
-    fontSize:24,
-    color: 'black'
+  arrow: {
+    width: 30,
+    height: 30,
   },
- });
+});
 
-export default MapScreen;
+export default Maps;
